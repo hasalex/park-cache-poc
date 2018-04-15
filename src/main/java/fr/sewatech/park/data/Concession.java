@@ -14,7 +14,7 @@ public class Concession extends AbstractDocument {
 
     private String name;
 
-    @DBRef @CacheableRef(cacheName = "city")
+    @DBRef @CacheableRef(cacheName = City.CACHE_NAME)
     private City city;
 
     @DBRef

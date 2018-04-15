@@ -1,0 +1,76 @@
+= park-cache-poc
+Just a proof of concept with Spring Boot, Data MongoDB and Cache
+
+The goal of this proof of concept is to find a good way to use Spring Cache with Spring Data Mongo.
+The *first step* is to annotate the repositories.
+The *second step* is to use the same cache on DBRef relations.
+
+== Enable cache
+
+The cache feature is enable in the Spring Boot way, with the `@EnableCaching`.
+There's no other configuration, which means that we have the default cache manager.
+
+== Enable cache on repositories
+
+The first step is to enable caching on the repositories.
+This is done a standard way, with Spring Cache annotations :
+
+* `@CacheConfig` on the interface, to choose the cache name,
+* `@Cacheable` on the `findById` method,
+* `@CacheEvict` on the `delete` method,
+* `@CachePut` on the `save` method.
+
+`@CacheEvict` and `@CachePut` need an additional setup, in order to find the right entry in the cache : `key = "#p0.id"`.
+
+[source, java]
+----
+@CacheConfig(cacheNames = City.CACHE_NAME)
+public interface CityRepository extends CrudRepository<City, String> {
+
+    @CachePut(key = "#p0.id")
+    City save(City entity);
+
+    @Cacheable()
+    Optional<City> findById(String id);
+
+    Iterable<City> findAll();
+
+    @CacheEvict(key = "#p0.id")
+    void delete(City entity);
+
+}
+----
+
+NOTE: Whereas Spring discourages the use of caching annotations on interfaces, this way seems to be working.
+
+== Enable cache on relations
+
+The relation should be annotated with the home made annotation `@CacheableRef`.
+Then the magic occurs in the `DocumentFindListener`.
+
+[source, java]
+----
+public class Concession extends AbstractDocument {
+
+   @DBRef @CacheableRef(cacheName = City.CACHE_NAME)
+   private City city;
+
+}
+----
+
+The listener will use the same cache as the standard annotations.
+
+When a find is called, the `onAfterLoad` is called before the transformation from document to entity.
+When the method find an annotated relation, it tries to find the target in the cache and replace the DBRef with the cached entity.
+
+The `onAfterConvert` method is called after the transformation.
+It put the target entity in the cache.
+
+By the way, the cache on relation can work without the cache on repositories.
+But it's probably less efficient.
+
+== Next
+
+* Cache on `findAll`
+* Support of `@CacheableRef` for collections
+* Optimisation
