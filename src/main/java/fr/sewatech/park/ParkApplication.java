@@ -1,7 +1,7 @@
 package fr.sewatech.park;
 
+import com.mongodb.MongoClient;
 import cz.jirutka.spring.embedmongo.EmbeddedMongoFactoryBean;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
@@ -13,7 +13,6 @@ import java.io.IOException;
 
 @SpringBootApplication
 @EnableCaching
-@Slf4j
 public class ParkApplication extends SpringBootServletInitializer {
 
     public static void main(String[] args) {
@@ -23,10 +22,15 @@ public class ParkApplication extends SpringBootServletInitializer {
     }
 
     @Bean
-    public MongoTemplate mongoTemplate() throws IOException {
+    public MongoTemplate mongoTemplate(MongoClient mongoClient) {
         return new MongoTemplate(
-                new EmbeddedMongoFactoryBean().getObject(),
+                mongoClient,
                 "embedded"
         );
+    }
+
+    @Bean
+    public MongoClient mongoClient() throws IOException {
+        return new EmbeddedMongoFactoryBean().getObject();
     }
 }
