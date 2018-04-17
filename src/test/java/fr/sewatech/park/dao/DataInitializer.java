@@ -17,6 +17,9 @@ class DataInitializer {
     static final String CONCESSION_ID = "conc0";
     static final String CONCESSION_NAME = "Concession Test";
 
+    static final String CONCESSION_LAZY_ID = "conc0-lazy";
+    static final String CONCESSION_LAZY_NAME = "Concession Test (with lazy city)";
+
     static void initDatabase(MongoClient mongoClient) {
         MongoDatabase database = mongoClient.getDatabase("embedded");
         database.drop();
@@ -35,6 +38,11 @@ class DataInitializer {
                 .append("name", CONCESSION_NAME)
                 .append("city", new DBRef("city", CITY_ID));
         concessionCollection.insertOne(concessionDocument);
+        Document lazyConcessionDocument = new Document()
+                .append("_id", CONCESSION_LAZY_ID)
+                .append("name", CONCESSION_LAZY_NAME)
+                .append("lazy_city", new DBRef("city", CITY_ID));
+        concessionCollection.insertOne(lazyConcessionDocument);
     }
 
     static City buildCity(String id, String name) {

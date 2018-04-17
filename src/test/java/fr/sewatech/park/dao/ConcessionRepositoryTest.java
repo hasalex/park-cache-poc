@@ -71,11 +71,25 @@ public class ConcessionRepositoryTest {
 
         // THeN
         City expectedCity = buildCity(CITY_ID, CITY_NAME);
+        assertThat(cacheManager.getCache(City.CACHE_NAME).get(CITY_ID))
+                .as("Cached city wrapper")
+                .isNotNull();
         assertThat(cacheManager.getCache(City.CACHE_NAME).get(CITY_ID).get())
-                .isNotNull()
+                .as("Cached city")
                 .isEqualTo(expectedCity);
     }
 
+    @Test
+    public void lazy_city_should_not_be_in_cache_after_findById() {
+        // GIVeN
+
+        // WHeN
+        concessionRepository.findById(CONCESSION_LAZY_ID);
+
+        // THeN
+        assertThat(cacheManager.getCache(City.CACHE_NAME).get(CITY_ID))
+                .isNull();
+    }
 
     @Test
     public void city_should_be_queried_in_database_on_first_findById() {
@@ -112,6 +126,42 @@ public class ConcessionRepositoryTest {
 
         verify(spiedCollection, never()).find(any(Bson.class));
     }
+
+    @Test
+    public void lazy_city_should_not_be_queried_in_database_on_findById() {
+        // GIVeN
+        MongoDatabase spiedDatabase = spyDatabase();
+        MongoCollection<Document> spiedCollection = spyCollection(spiedDatabase, "city");
+
+        // WHeN
+        Concession concession = concessionRepository.findById(CONCESSION_LAZY_ID)
+                .orElseThrow(() ->  new RuntimeException("Concession not found for id " + CONCESSION_LAZY_ID));
+//        concessionRepository.findById(CONCESSION_LAZY_ID);
+
+        // THeN
+        verify(mongoTemplate, times(1)).findById(CONCESSION_LAZY_ID, Concession.class, "concession");
+        verify(spiedCollection, never()).find(any(Bson.class));
+    }
+
+    @Test
+    public void lazy_city_should_be_queried_in_database_on_get() {
+        // GIVeN
+        MongoDatabase spiedDatabase = spyDatabase();
+        MongoCollection<Document> spiedCollection = spyCollection(spiedDatabase, "city");
+
+        Concession concession = concessionRepository.findById(CONCESSION_LAZY_ID)
+                .orElseThrow(() ->  new RuntimeException("Concession not found for id " + CONCESSION_LAZY_ID));
+
+        // WHeN
+        concession.getLazyCity().getName();
+
+        // THeN
+        verify(mongoTemplate, times(1)).findById(CONCESSION_LAZY_ID, Concession.class, "concession");
+        verify(spiedCollection, times(1)).find(any(Bson.class));
+    }
+
+
+
 
     private MongoCollection<Document> spyCollection(MongoDatabase spiedDatabase, String collectionName) {
         MongoCollection<Document> collection = mongoClient.getDatabase("embedded").getCollection(collectionName);
